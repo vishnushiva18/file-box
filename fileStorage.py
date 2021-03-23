@@ -1,7 +1,7 @@
 import os
 from telethon import TelegramClient, events, sync, types
 from flask import (Flask,session, g, json, Blueprint,flash, jsonify, redirect, render_template, request,
-                   url_for, send_from_directory, send_file)
+                   url_for, send_from_directory, send_file, make_response)
 from werkzeug.utils import secure_filename
 from asgiref.sync import async_to_sync, sync_to_async
 import asyncio
@@ -279,7 +279,7 @@ def home():
     return render_template('login.html')
     # return render_template('index.html', results = x)
     
-@app.route('/generateotp', methods=['GET', 'POST'])
+@app.route('/generateotp/', methods=['GET', 'POST'])
 def generateotp():
     if request.method == 'POST':
         _mobile = request.form['username']
@@ -290,7 +290,7 @@ def generateotp():
 
     return redirect(url_for('login'))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login/', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
@@ -319,13 +319,13 @@ def login():
     return render_template('login.html', error=error)
 
 
-@app.route('/logout')
+@app.route('/logout/')
 def logout():
     session['logged_in'] = False
     session['mobile'] = None
     return redirect(url_for('login'))
 
-@app.route('/upload-file', methods=['GET', 'POST'])
+@app.route('/upload-file/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'GET':
         uid = request.args.get('file_id', None)
@@ -529,16 +529,18 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'],
                                filename, as_attachment=True)
 
-@app.route('/uid')
+@app.route('/uid/')
 def getUid():
     _uid = uuid.uuid4()
     print(_uid)
     return "vv"
 
 if __name__ == '__main__':
-    app.run(debug = True) 
+    # app.run(debug = True) 
+    app.run() 
     # app.run('127.0.0.1' , 5000 , debug=True)
-    app.run('0.0.0.0' , 5001 , threaded=True)
+    # app.run('0.0.0.0' , 5001 , threaded=True)
+    # app.run('0.0.0.0' , 80 , threaded=True)
 
 
     # tgApp = tgClient()

@@ -1,1 +1,3 @@
 *.session
+build/
+__pycache__/

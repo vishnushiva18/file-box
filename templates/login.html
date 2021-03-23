@@ -1,0 +1,45 @@
+<!doctype html>
+<head>
+  {% if session.logged_in %}
+    <meta http-equiv="Refresh" content="0; url=/upload-file" />
+  {% endif %}
+  
+  <title>File Sharing</title>
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="./static/paper.css">
+
+</head>
+<body>
+  <div class=page>
+    <h1>File Sharing</h1>
+
+    <h4>Login with Your Registerd Telegram Mobile number</h4>
+    {% if error %}<p class=error><strong>Error:</strong> {{ error }} </p> {% endif %}
+    {% if mobile == undifined or mobile == null or mobile == "" %}
+      <form action="{{ url_for('login') }}" method=post>
+          Mobile Number:<input type=text name=username>
+          <input type=submit value="Generate OTP">
+          <input type="hidden" name="action" value="generate-otp">
+      </form>
+    {% endif %}
+
+    {% if mobile != undifined %}
+      <div class="row"> 
+        Mobile Number: {{mobile}}
+        <div style="padding-left: 10px;">
+          <a href="/login">Change</a>
+        </div>
+      </div>
+      
+      <form action="{{ url_for('login') }}" method=post>
+        OTP:
+        <input type=password name=password>
+        <input type=submit value=Login>
+        <input type="hidden" name="username" value={{mobile}}>
+        <input type="hidden" name="action" value="submit-otp">
+      </form>
+    {% endif %}
+  </div>
+
+</body>
+

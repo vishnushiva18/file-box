@@ -1,0 +1,40 @@
+<!doctype html>
+<head>
+  {% if not session.logged_in %}
+    <meta http-equiv="Refresh" content="0; url=/login" />
+  {% endif %}
+  <title>File Sharing</title>
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="./static/paper.css">
+</head>
+
+<body>
+  {% if not session.logged_in %}
+    <h2>Please login to upload files</h2>
+    <div style="padding-left: 10px;">
+      <a href="/logout">Login</a>
+    </div>
+  {% else %}
+    <div class="row"> 
+      <h2>Welcome {{session.mobile}}</h2>
+      <div style="padding-left: 10px;">
+        <a href="/logout">Logout</a>
+      </div>
+    </div>
+
+    <h3>Upload new File</h3>
+    <form method=post enctype=multipart/form-data>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+
+    {% if uid != undifined %}
+      <div>
+        <h3>File Successfully Uploaded</h3>
+        File Id: {{uid}}<br/>
+        File Name: {{file_name}}<br/>
+        Download Link: <a href={{download_link}} target="_blank">{{download_link}}</a>
+      </div>
+    {% endif %}
+  {% endif %}
+</body>

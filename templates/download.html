@@ -10,6 +10,47 @@
 
 <body>
   {% if uid != undifined %}
+    {% if session.logged_in %}
+      <div class="row"> 
+        {% if session.login_mode == "user_mobile" %}
+          <h2>Welcome {{session.mobile}}</h2>
+        {% endif %}
+
+        {% if session.login_mode == "guest_email" %}
+          <h2>Welcome {{session.email}}</h2>
+        {% endif %}
+
+        <div style="padding-left: 10px;">
+          <!-- <a href="/logout">Logout</a> -->
+          <p onclick="logout()">Logout</p>
+        </div>
+      </div>
+    {% else %}
+      <h2>Please login to download file or Verify with your email id to download</h2>
+      <div class="row" style="display: inline-block;margin-top: 10px;">
+        <div style="float: left;">
+          <button id=btnLogin onclick="loginAndDownload('{{uid}}')">Login</button> 
+        </div>
+        <div style="float: left;padding-left: 10px;">
+          OR
+        </div>
+      </div>
+      <br><br>
+      <div id="div_email_verify">
+        Email Id:
+        <input type="email" id="email_id" name="email_id">
+        <button id=btnGetOTP onclick="getEmailOTP('{{uid}}')">Get OTP</button>
+        <br>
+        <div id="div_email_verify_otp" style="display: none;">
+          OTP:
+          <input type="password" id="email_otp" name="email_otp" style="width: 100px;">
+          <button id=btnVerifyOTP onclick="verifyEmailOTP('{{uid}}')">Verify</button>
+        </div>
+        <p id="otp_status" style="font-weight: bold;"></p>
+      </div>
+      <br><br>
+    {% endif %}
+
     <div>
       <h3>File Name: {{file_name}}</h3>
       File Id: {{uid}}<br/>
@@ -22,7 +63,11 @@
       {% if is_deleted %}
         <p id="status"><b>File Deleted</b></p>
       {% else %}
-        <button id=btnDownload onclick="downloadFile('{{uid}}', '{{file_name}}')">Download</button> 
+        {% if session.logged_in %}
+          <button id=btnDownload onclick="downloadFile('{{uid}}', '{{file_name}}')">Download</button> 
+        {% else %}
+
+        {% endif %}
       {% endif %}
       <!-- <button onclick="document.location='/download-file/{{uid}}'">Download</button>  -->
       <p id="status"></p>
@@ -77,4 +122,63 @@
         return bytes;
     };
 
+    function getEmailOTP(uid){
+      email = $("#email_id").val();
+      if(!isEmail(email)){
+        alert("Invalid Email");
+        return;
+      }
+
+      $.ajax({
+            type: "GET",
+            url: "/generate-email-otp/?email=" + email,
+            success: function (r) {
+                //Convert Base64 string to Byte Array.
+                if(r.split("|")[0] == "1"){
+                  $("#email_id").prop('disabled', true);
+                  $("#btnGetOTP").prop('disabled', true);
+                  $("#div_email_verify_otp").show();
+                  $("#otp_status").html("OTP sent to " + email)
+
+                  return;
+                }
+                $("#otp_status").html("OTP sending failed")
+            }
+        });
+      // $("#div_email_verify_otp").attr('visibility', 'visible');
+    }
+
+    function verifyEmailOTP(){
+      email = $("#email_id").val();
+      otp = $("#email_otp").val();
+      if(!isEmail(email)){
+        alert("Invalid Email");
+        return;
+      }
+
+      $.ajax({
+            type: "GET",
+            url: "/verify-email-otp/?email=" + email + "&otp=" + otp,
+            success: function (r) {
+                //Convert Base64 string to Byte Array.
+                if(r.split("|")[0] == "1"){
+                  location.reload(); 
+                  return;
+                }
+
+                $("#otp_status").html("Invalid OTP")
+            }
+        });
+
+      // $("#btnDownload").show();
+    }
+
+    function isEmail(email) {
+      var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+      return regex.test(email);
+    }
+
+    function logout(){
+      alert("h")
+    }
 </script>

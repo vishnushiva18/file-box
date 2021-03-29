@@ -13,6 +13,7 @@ import base64
 import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
+import random
 
 tgApp = None
 api_id = 50689
@@ -208,6 +209,27 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'mp4', '
 #     _r = await _client.get_me()
 #     return _r.stringify()
 
+def sendOtp(mobile = None, email = None):
+    _otp = "".join( map(str, random.sample(range(0, 9), 6)))
+    
+    if mobile != None:
+        _q = f"update tg_filebox_otp set n_expired = 1 where c_user_id = '{mobile}' and n_expired = 0"
+        _r = db.execute(conn.tg, _q)
+        print(_r)
+
+        _q = f"insert into tg_filebox_otp(c_user_id, c_otp, t_valid_till) values ('{mobile}', '{_otp}', date_add(now(), interval 30 minute))"
+        db.execute(conn.tg, _q)
+
+
+    if email != None:
+        _q = f"update tg_filebox_otp set n_expired = 1 c_user_id = '{email}' and n_expired = 0"
+        db.execute(conn.tg, _q)
+
+        _q = f"insert into tg_filebox_otp(c_user_id, c_otp, t_valid_till) values ('{email}', '{_otp}', date_add(now(), interval 30 minute))"
+        db.execute(conn.tg, _q)
+        
+    return True
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -276,7 +298,11 @@ def logDownload(uid):
 
 @app.route('/')
 def home():
-    return render_template('login.html')
+    if request.method == 'GET':
+        error = request.args.get('error', None)
+
+    return render_template('login.html', error=error)
+    # return render_template('login.html')
     # return render_template('index.html', results = x)
     
 @app.route('/generateotp/', methods=['GET', 'POST'])
@@ -290,6 +316,35 @@ def generateotp():
 
     return redirect(url_for('login'))
 
+@app.route('/generate-email-otp/', methods=['GET', 'POST'])
+def generate_email_otp():
+    if request.method == 'GET':
+        _email = request.args.get('email', None)
+        if _email == None or _email == "":
+            return "0|Invalid Email"
+
+        sendOtp(email=_email)
+        return "1|OTP Sent"
+
+    return redirect(url_for('login'))
+
+@app.route('/verify-email-otp/', methods=['GET', 'POST'])
+def verify_email_otp():
+    if request.method == 'GET':
+        _email = request.args.get('email', None)
+        _otp = request.args.get('otp', None)
+        _q = f"select n_id from tg_filebox_otp where c_user_id = '{_email}' and c_otp = '{_otp}' and n_expired = 0 and t_valid_till > now() order by n_id desc limit 1"
+        _r = db.select(conn.tg, _q)
+        if not _r['status'] or len(_r['data']) == 0:
+            return "0|Invalid OTP"
+
+        session['logged_in'] = True
+        session['email'] = _email
+        session['login_mode'] = 'guest_email'
+
+        return "1|OTP Verified"
+
+
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
     error = None
@@ -301,13 +356,22 @@ def login():
             if _mobile == None or len(_mobile) != 10:
                 return redirect(url_for('login', error = "Invalid Mobile Number"))
 
+            print("h")
+            sendOtp(mobile = _mobile)
+                
         elif _action == "submit-otp":
             _password = request.form['password']
-            if _password != "0011":
+            _q = f"select n_id from tg_filebox_otp where c_user_id = '{_mobile}' and c_otp = '{_password}' and n_expired = 0 and t_valid_till > now() order by n_id desc limit 1"
+            print(_q)
+            _r = db.select(conn.tg, _q)
+            print(_r)
+            if not _r['status'] or len(_r['data']) == 0:
                 return render_template('login.html', mobile = _mobile, error = "Invalid OTP")
 
             session['logged_in'] = True
             session['mobile'] = _mobile
+            session['login_mode'] = 'user_mobile'
+
             return redirect(url_for('upload_file'))
 
         return render_template('login.html', mobile = _mobile)
@@ -381,6 +445,7 @@ def upload_file():
                 if uploadFromBlob:
                     _file_blob = file.read()
 
+                    loop = asyncio.new_event_loop()
                     r = loop.run_until_complete(_tg.uploadBlob(loop, _file_blob, 'Uploaded From vis-tg-file-share: ' + _uid))
                 
                 _ip = getIp()
@@ -466,6 +531,11 @@ def download(uid):
 
 @app.route('/download-file/<uid>', methods=['GET'])
 def download_file(uid):
+    _allow_download = False
+    # session['login_mode'] = 'user_mobile'
+    if session['logged_in']:
+        _allow_download = True
+
     _data = getFileInfo(uid)
     if _data['deleted']:
         return None
@@ -536,8 +606,8 @@ def getUid():
     return "vv"
 
 if __name__ == '__main__':
-    # app.run(debug = True) 
-    app.run() 
+    app.run(debug = True) 
+    # app.run() 
     # app.run('127.0.0.1' , 5000 , debug=True)
     # app.run('0.0.0.0' , 5001 , threaded=True)
     # app.run('0.0.0.0' , 80 , threaded=True)
